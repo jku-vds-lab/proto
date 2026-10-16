@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { motion } from 'framer-motion'
-import { SceneShell, Reveal, Panel, TierNote, InfoBox } from '../components/Scene'
+import { SceneShell, Reveal, Panel, TierNote, GlossaryTerm } from '../components/Scene'
 import { ZoomImage, BoxPicker, MetricToggle, RepoLink, Cite, useMagnet } from '../components/Viz'
 import { DINOV3, CLIP } from '../data/references'
 
@@ -614,11 +614,7 @@ function NationalityScene() {
           and Russia. Uncertainty intervals are estimated by bootstrap
           resampling over seeds.
         </p>
-        <InfoBox title="glossary · embedding">
-          <p>
-            The list of numbers that stands for one picture or one sentence inside these systems.
-          </p>
-        </InfoBox>
+        {/* the embedding definition rides on its first mention in the section lead below */}
       </Reveal>
       <Reveal delay={0.06}>
         <Panel className="mt-10">
@@ -1010,16 +1006,19 @@ function SectionLead() {
           Previous work using crowdsourced human annotation has found that images generated from prompts that do not
           specify geographic location tend to resemble representations associated with the United States more closely
           than those associated with other countries <Cite ids={['basu2023']} />. We visually examine such a geographic alignment by exploring
-          the embedding spaces of images generated from the geographically unspecified prompts “a &lt;scene&gt;”, and
-          their corresponding country-specific variants “a &lt;scene&gt; in &lt;country&gt;”. We obtain the visual
+          the{' '}
+          <GlossaryTerm
+            term="embedding"
+            def={<p>The list of numbers that stands for one picture or one sentence inside these systems.</p>}
+          >
+            embedding spaces
+          </GlossaryTerm>{' '}
+          of images generated from the geographically unspecified prompts “a &lt;scene&gt;”, and
+          their corresponding country-specific variants “a &lt;scene&gt; in &lt;country&gt;”. Importantly, as the
+          country-specific images are also model-generated rather than ground-truth images, they reflect the model's
+          representation of a country but do not necessarily depict that country accurately. We obtain the visual
           embeddings from two image encoders: <RepoLink m={DINOV3} /> <Cite ids={['simeoni2025']} /> and <RepoLink m={CLIP} /> <Cite ids={['radford2021']} />.
         </p>
-        <InfoBox title="glossary · annotator">
-          <p>
-            A separate AI system that is shown each picture on its own, without being told what was
-            asked for, and says what it can see in it.
-          </p>
-        </InfoBox>
       </Reveal>
     </div>
   )

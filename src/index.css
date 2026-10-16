@@ -46,6 +46,18 @@
     --c-gray: 124 130 153;
     --c-gray-t: 170 176 196;
 
+    /* scene tokens (HSL triplets), scene 06's all-directions chart. The article's
+       own accent hues at one shared saturation and lightness (option B2 in the
+       light set, chosen 2026-10-16), so no scene reads louder than another. Kept
+       off the country hues on purpose: a scene line must never read as a country.
+       School is a grey, drawn dashed — it is the exception the chart sets apart. */
+    --s-wedding: 32 62% 62%;
+    --s-funeral: 205 62% 62%;
+    --s-celebration: 355 62% 62%;
+    --s-family: 160 62% 62%;
+    --s-breakfast: 262 62% 62%;
+    --s-school: 215 12% 58%;
+
     /* ── country tokens ───────────────────────────────────────────────────────
        Eight categorical hues, replacing the blue→red ramp that used to encode
        WEIRD→far. The ramp was unreadable as an identity channel: five of the
@@ -131,6 +143,13 @@
     --c-blue: 59 98 217;
     --c-gray: 100 116 139;
     --c-gray-t: 71 85 105;
+
+    --s-wedding: 32 62% 42%;
+    --s-funeral: 205 62% 42%;
+    --s-celebration: 355 62% 42%;
+    --s-family: 160 62% 42%;
+    --s-breakfast: 262 62% 42%;
+    --s-school: 215 12% 60%;
 
     /* same eight hues, re-stepped for the light surface — not an automatic
        darkening of the dark set. NG is the one slot where both bands admit the

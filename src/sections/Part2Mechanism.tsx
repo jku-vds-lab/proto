@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { SceneShell, Reveal, Panel, TierNote, InfoBox } from '../components/Scene'
+import { SceneShell, Reveal, Panel, TierNote, GlossaryTerm } from '../components/Scene'
 import { ZoomImage, Picker, BoxPicker, MetricToggle, HowItWorks, useMagnet, RepoLink } from '../components/Viz'
 import { DINOV3, CLIP } from '../data/references'
 import { Sd21Only } from '../components/ModelBar'
@@ -12,7 +12,7 @@ import {
   LAION,
 } from '../data/part2'
 import { swapImgSeed } from '../data/uiv2'
-import { lockFit, fitCurve, matrix, dist as xmDist, intraset as xmIntraset, type Ruler, type LockFit } from '../data/crossmodel'
+import { lockFit, fitCurve, matrix, dist as xmDist, intraset as xmIntraset, type Ruler } from '../data/crossmodel'
 import { useModel, isSd21, MODEL_NAME } from '../data/modelData'
 
 const MONO = 'JetBrains Mono'
@@ -40,8 +40,11 @@ function LockupCurve({ direction, activeStep, onPick }: {
   const pts = LOCKUP_STEPS.map((s) => ({ s,...LOCKUP[direction].curve[stepKey(s)] }))
   const isHero = direction === HERO_DIRECTION
   /* Tier C: every direction's own logistic fit is exported now, so the curve is no
-     longer one hardcoded hero line. Two of the 24 did not converge (family EG→RU,
-     funeral IN→RU) and simply get no curve, which is the honest outcome. */
+     longer one hardcoded hero line. All 24 fit as of 2026-10-16. Four directions
+     (family EG→RU, funeral IN→RU, celebration ID→JP, family JP→US) are separated —
+     one step between 0% and 100% — so they carry a Firth-penalised fit with a
+     profile CI instead of a cliff (ui_lab/lockfit3). The no-fit branch below stays
+     as a safety net. */
   const fit = lockFit(direction)
 
   const fitPath = useMemo(() => {
@@ -57,14 +60,30 @@ function LockupCurve({ direction, activeStep, onPick }: {
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
-      {fit && (
-        <>
-          <rect x={x(fit.ci[0])} y={padT} width={x(fit.ci[1]) - x(fit.ci[0])} height={H - padT - padB} fill={rgba('--c-amber', 0.08)} />
-          <text x={(x(fit.ci[0]) + x(fit.ci[1])) / 2} y={padT + 11} textAnchor="middle" fontSize="9" fill={rgba('--c-amber-t', 0.85)} fontFamily={MONO}>
-            the switchover: step {fit.step} (95% CI {fit.ci[0]}–{fit.ci[1]})
-          </text>
-        </>
-      )}
+      {fit && (() => {
+        /* School fits are so flat that their CIs reach below step 1 (as low as
+           −26.56). The band is clipped to the 1–30 axis and an out-of-range bound
+           is named rather than printed as a negative step (2b, option B). */
+        const lo = Math.max(fit.ci[0], 1)
+        const hi = Math.min(fit.ci[1], 30)
+        const clipped = fit.step < 1 || fit.ci[0] < 1 || fit.ci[1] > 30
+        const at = (v: number) => (v < 1 ? 'below step 1' : v > 30 ? 'after step 30' : `step ${v}`)
+        const label = clipped
+          ? `the switchover: ${at(fit.step)} (95% CI ${at(fit.ci[0])} to ${at(fit.ci[1])})`
+          : `the switchover: step ${fit.step} (95% CI ${fit.ci[0]}–${fit.ci[1]})`
+        /* the long clipped label is kept inside the plot rather than centred on a
+           band that sits against the axis; unclipped labels stay where they were */
+        const mid = (x(lo) + x(hi)) / 2
+        const cx = clipped ? Math.min(Math.max(mid, padL + 175), W - 18 - 175) : mid
+        return (
+          <>
+            <rect x={x(lo)} y={padT} width={Math.max(x(hi) - x(lo), 0)} height={H - padT - padB} fill={rgba('--c-amber', 0.08)} />
+            <text x={cx} y={padT + 11} textAnchor="middle" fontSize="9" fill={rgba('--c-amber-t', 0.85)} fontFamily={MONO}>
+              {label}
+            </text>
+          </>
+        )
+      })()}
       <line x1={padL} x2={W - 18} y1={y(0.5)} y2={y(0.5)} stroke="hsl(var(--grid))" strokeDasharray="4 4" />
       <text x={W - 20} y={y(0.5) - 5} textAnchor="end" fontSize="9" fill="hsl(var(--svg-fg))" fontFamily={MONO}>
         50%, a coin flip
@@ -112,7 +131,7 @@ function LockupCurve({ direction, activeStep, onPick }: {
       )}
       {!fit && (
         <text x={W / 2} y={padT + 12} textAnchor="middle" fontSize="9" fill="hsl(var(--svg-fg))" fontFamily={MONO}>
-          no clean logistic fit for this direction: the five measured points are all there is
+          no logistic fit exported for this direction: the five measured points are all there is
         </text>
       )}
       {pts.map((p, i) => (
@@ -123,6 +142,144 @@ function LockupCurve({ direction, activeStep, onPick }: {
       ))}
       <line x1={x(activeStep)} x2={x(activeStep)} y1={padT} y2={H - padB} stroke="hsl(var(--foreground) / 0.3)" />
     </svg>
+  )
+}
+
+/* ── scene 06 · all 24 directions at once ─────────────────────────────────
+   Rebuilt 2026-10-16 (Giray) for the reviewer's "the average or set of curves
+   across all data subsets, to see if there is a common drop-off". The old panel
+   stacked three encodings (24 faint lines, a thick mean, a thick picked direction,
+   plus a strip of fitted crossings) and stated no takeaway. Now: one line per
+   direction coloured by scene (--s-* tokens, one shared saturation/lightness),
+   a dot at each measured step, school grey and dashed as the exception, a light
+   band where the non-school lines fall, a scene legend whose hover brings that
+   scene forward, and the reading instructions in the paragraph above rather than
+   inside the figure. No direction is singled out: this is the general picture. */
+const SCENE_TOKEN: Record<Sit, string> = {
+  wedding: '--s-wedding', funeral: '--s-funeral', celebration: '--s-celebration',
+  family: '--s-family', breakfast: '--s-breakfast', school: '--s-school',
+}
+
+function AllDirections() {
+  const [hover, setHover] = useState<Sit | null>(null)
+  /* sized for the right-hand column (2026-10-16): at this width one SVG unit is
+     about one pixel, so the 11px labels stay 11px */
+  const W = 520, H = 360, pl = 56, pr = 14, pt = 12, pb = 52
+  const last = LOCKUP_STEPS[LOCKUP_STEPS.length - 1]
+  const x = (s: number) => pl + ((s - 1) / (last - 1)) * (W - pl - pr)
+  const y = (p: number) => pt + (1 - p) * (H - pt - pb)
+  const sitOf = (d: string) => parseDirection(d).sit
+  /* the band: the two measured steps between which the mean over the non-school
+     directions crosses 50% (derived, so it moves if the data does) */
+  const nonSchool = DIRECTIONS.filter((d) => sitOf(d) !== 'school')
+  const meanAt = (k: number) => nonSchool.reduce((s, d) => s + LOCKUP[d].curve[stepKey(k)].p_closer_B, 0) / nonSchool.length
+  const cross = LOCKUP_STEPS.findIndex((k, i) => i > 0 && meanAt(k) < 0.5 && meanAt(LOCKUP_STEPS[i - 1]) >= 0.5)
+  const [bandLo, bandHi] = [LOCKUP_STEPS[cross - 1], LOCKUP_STEPS[cross]]
+  const nSeeds = LOCKUP[DIRECTIONS[0]].curve[stepKey(LOCKUP_STEPS[0])].n_seeds
+  /* directions whose five measured values coincide exactly draw as one line */
+  const curveCount: Record<string, number> = {}
+  for (const d of DIRECTIONS) {
+    const k = LOCKUP_STEPS.map((s) => LOCKUP[d].curve[stepKey(s)].p_closer_B).join(',')
+    curveCount[k] = (curveCount[k] ?? 0) + 1
+  }
+  const dupPairs = Object.values(curveCount).filter((n) => n > 1).length
+  const order = hover ? [...DIRECTIONS.filter((d) => sitOf(d) !== hover), ...DIRECTIONS.filter((d) => sitOf(d) === hover)] : DIRECTIONS
+  const col = (s: Sit, a = 1) => `hsl(var(${SCENE_TOKEN[s]}) / ${a})`
+
+  return (
+    /* text left, chart right on wide screens, so the figure does not take a full
+       row on its own; stacks on narrow screens */
+    <div className="mt-12 grid items-start gap-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-10">
+      <Reveal delay={0.08}>
+        <p className="prose-scene">
+          Does the country settle at the same step everywhere? The chart repeats the experiment above for all{' '}
+          {DIRECTIONS.length} switch directions at once: {SITS.length} scenes, {DIRECTIONS.length / SITS.length} country
+          pairs each. Each line is one direction, and each dot shows how many of its {nSeeds} images ended up closer to
+          the new country when the switch came at that step. Hover a scene to bring its lines forward. In every scene
+          except school, the lines fall together in the shaded band, between step {bandLo} and step {bandHi}: switch
+          before it and most images follow the new country, switch after it and almost none do. School, drawn dashed,
+          behaves differently: its images of two countries look so alike that the switch has little to change, so its
+          lines start low and stay flat.
+          {dupPairs > 0 &&
+            ` ${dupPairs === 1 ? 'One pair' : `${['Two', 'Three', 'Four', 'Five'][dupPairs - 2] ?? dupPairs} pairs`} of directions happen to give the same counts at every step, so their lines lie exactly on top of each other.`}
+        </p>
+      </Reveal>
+      <Reveal delay={0.1}>
+        <Panel>
+          <div className="font-mono2 text-[10px] tracking-widest text-foreground/40 uppercase">
+            all {DIRECTIONS.length} switch directions at once
+          </div>
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5" onMouseLeave={() => setHover(null)}>
+            {SITS.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onMouseEnter={() => setHover(s)}
+                onFocus={() => setHover(s)}
+                onBlur={() => setHover(null)}
+                className={`inline-flex items-center gap-1.5 font-mono2 text-[11px] transition ${hover && hover !== s ? 'opacity-35' : ''} ${hover === s ? 'text-foreground' : 'text-foreground/70'}`}
+              >
+                <svg width="16" height="4" aria-hidden>
+                  <line x1="0" x2="16" y1="2" y2="2" stroke={col(s)} strokeWidth="2" strokeDasharray={s === 'school' ? '4 3' : undefined} />
+                </svg>
+                a {s}
+              </button>
+            ))}
+          </div>
+          <svg viewBox={`0 0 ${W} ${H}`} className="mt-3 w-full" role="img" aria-label="share of images that follow the new country, per switch step, for every direction">
+            <rect x={x(bandLo)} y={pt} width={x(bandHi) - x(bandLo)} height={H - pt - pb} fill={rgba('--c-amber', 0.08)} />
+            {[0, 0.5, 1].map((g) => (
+              <g key={g}>
+                <line x1={pl} x2={W - pr} y1={y(g)} y2={y(g)} stroke="hsl(var(--grid))" strokeDasharray={g === 0.5 ? '4 4' : undefined} />
+                <text x={pl - 8} y={y(g) + 4} textAnchor="end" fontSize="11" fill="hsl(var(--svg-fg))" fontFamily={MONO}>
+                  {g * 100}%
+                </text>
+              </g>
+            ))}
+            {LOCKUP_STEPS.map((k) => (
+              <text key={k} x={x(k)} y={H - pb + 18} textAnchor="middle" fontSize="11" fill="hsl(var(--svg-fg))" fontFamily={MONO}>
+                {k}
+              </text>
+            ))}
+            <text x={(pl + W - pr) / 2} y={H - 8} textAnchor="middle" fontSize="11" fill="hsl(var(--svg-fg))" fontFamily={MONO}>
+              step the country is switched at (of 30)
+            </text>
+            <text
+              x={14}
+              y={(pt + H - pb) / 2}
+              transform={`rotate(-90 14 ${(pt + H - pb) / 2})`}
+              textAnchor="middle"
+              fontSize="11"
+              fill="hsl(var(--svg-fg))"
+              fontFamily={MONO}
+            >
+              images that follow the new country
+            </text>
+            {order.map((d) => {
+              const s = sitOf(d)
+              const on = hover === s
+              const a = hover && !on ? 0.12 : 0.85
+              const pts = LOCKUP_STEPS.map((k) => [x(k), y(LOCKUP[d].curve[stepKey(k)].p_closer_B)] as const)
+              return (
+                <g key={d}>
+                  <polyline
+                    fill="none"
+                    stroke={col(s, a)}
+                    strokeWidth={on ? 1.4 : 1.1}
+                    strokeDasharray={s === 'school' ? '4 3' : undefined}
+                    points={pts.map(([px, py]) => `${px},${py}`).join(' ')}
+                    style={{ transition: 'stroke 150ms, stroke-width 150ms' }}
+                  />
+                  {pts.map(([px, py], i) => (
+                    <circle key={i} cx={px} cy={py} r={on ? 2.4 : 2} fill={col(s, a)} />
+                  ))}
+                </g>
+              )
+            })}
+          </svg>
+        </Panel>
+      </Reveal>
+    </div>
   )
 }
 
@@ -143,32 +300,18 @@ export function CommitEarlyScene() {
   const fit = lockFit(direction)
   const pt = LOCKUP[direction].curve[stepKey(step)]
   const committed = pt.p_closer_B < 0.5
+  /* 2026-10-16 (Giray): the direction wall of up to 24 boxes became a dropdown.
+     The event row stays the first step and filters it to that event's four pairs;
+     "all 24" keeps every pair reachable as one select grouped by event, since not
+     every event carries the same country pairs. */
   const dirOpts = (allDirs ? DIRECTIONS : DIRECTIONS.filter((d) => parseDirection(d).sit === sit)).map((d) => {
     const p = parseDirection(d)
     return {
       value: d,
-      label: allDirs ? `a ${p.sit} · ${C8[p.a].name} → ${C8[p.b].name}` : `${C8[p.a].name} → ${C8[p.b].name}`,
+      label: `${C8[p.a].name} → ${C8[p.b].name}`,
+      group: allDirs ? `a ${p.sit}` : undefined,
     }
   })
-  /* the population view (R3a): every direction's five measured points, the
-     non-school mean, and the fitted switchovers as a strip, so "is there a
-     common drop-off layer" is a picture instead of 24 toggles and a memory. */
-  const px = (k: number) => 40 + ((k - 1) / 29) * 580
-  const py = (p: number) => 200 - p * 180
-  const nonSchool = DIRECTIONS.filter((d) => parseDirection(d).sit !== 'school')
-  const meanAt = (k: number) => {
-    const xs = nonSchool.map((d) => LOCKUP[d].curve[stepKey(k)].p_closer_B)
-    return xs.reduce((s, x) => s + x, 0) / xs.length
-  }
-  const fits = DIRECTIONS.map((d) => ({ d, f: lockFit(d) }))
-    .filter((x): x is { d: string; f: LockFit } => x.f !== null)
-    .map((x) => ({ d: x.d, step: x.f.step }))
-  const unfitted = DIRECTIONS.filter((d) => lockFit(d) === null)
-  const sortedSteps = fits.map((x) => x.step).sort((a, b) => a - b)
-  const medianStep = sortedSteps[Math.floor((sortedSteps.length - 1) / 2)]
-  const firstThird = sortedSteps.filter((s) => s <= 10).length
-  const beforeHalf = sortedSteps.filter((s) => s < 15).length
-  const nsSteps = fits.filter((x) => parseDirection(x.d).sit !== 'school').map((x) => x.step)
 
   return (
     <SceneShell
@@ -236,7 +379,17 @@ export function CommitEarlyScene() {
             {!allDirs && (
               <BoxPicker label="scene" value={sit} onChange={setSituation} options={SIT_OPTS} size="sm" />
             )}
-            <BoxPicker label="swap direction" value={direction} onChange={setDirection} options={dirOpts} size="sm" />
+            {allDirs ? (
+              <Picker
+                label="swap direction · all events"
+                value={direction}
+                onChange={setDirection}
+                options={dirOpts}
+                width="w-64"
+              />
+            ) : (
+              <BoxPicker label="swap direction" value={direction} onChange={setDirection} options={dirOpts} size="sm" />
+            )}
             <button
               type="button"
               onClick={() => setAllDirs((v) => !v)}
@@ -386,75 +539,7 @@ export function CommitEarlyScene() {
           )}
         </Panel>
       </Reveal>
-      <Reveal delay={0.08}>
-        <Panel className="mt-10">
-          <div className="font-mono2 text-[10px] tracking-widest text-foreground/40 uppercase">
-            all {DIRECTIONS.length} directions at once
-          </div>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-foreground/60">
-            One thin line per direction: the share of seeds ending up nearer the country named
-            after the swap, at the five sampled steps. The thick line is the mean over the{' '}
-            {nonSchool.length} non-school directions. School is drawn but never averaged: its two
-            sets overlap at the level of individual seeds, so a switchover fitted there measures
-            noise.
-          </p>
-          <svg viewBox="0 0 640 220" className="mt-4 w-full" role="img" aria-label="share of seeds nearer the new prompt, per step, for every direction">
-            {[0, 0.5, 1].map((g) => (
-              <g key={g}>
-                <line x1={40} x2={620} y1={200 - g * 180} y2={200 - g * 180} strokeWidth={1} style={{ stroke: 'rgb(var(--foreground) / 0.12)' }} />
-                <text x={34} y={204 - g * 180} textAnchor="end" fontSize={9} fontFamily="JetBrains Mono" className="fill-foreground/40">
-                  {g === 0.5 ? '50%' : g === 1 ? '100%' : '0%'}
-                </text>
-              </g>
-            ))}
-            {LOCKUP_STEPS.map((k) => (
-              <text key={k} x={px(k)} y={214} textAnchor="middle" fontSize={9} fontFamily="JetBrains Mono" className="fill-foreground/40">
-                {k}
-              </text>
-            ))}
-            {DIRECTIONS.map((d) => (
-              <polyline
-                key={d}
-                fill="none"
-                strokeWidth={d === direction ? 2 : 1}
-                style={{ stroke: d === direction ? 'rgb(var(--c-amber))' : 'rgb(var(--foreground) / 0.18)' }}
-                points={LOCKUP_STEPS.map((k) => `${px(k)},${py(LOCKUP[d].curve[stepKey(k)].p_closer_B)}`).join(' ')}
-              />
-            ))}
-            <polyline
-              fill="none"
-              strokeWidth={2.5}
-              style={{ stroke: 'rgb(var(--c-amber))' }}
-              points={LOCKUP_STEPS.map((k) => `${px(k)},${py(meanAt(k))}`).join(' ')}
-            />
-          </svg>
-          <div className="relative mt-2 h-6 border-t border-border">
-            {fits.map((x) => (
-              <span
-                key={x.d}
-                title={`${x.d}: switchover step ${x.step.toFixed(1)}`}
-                className="absolute top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full"
-                style={{ left: `${(x.step / 30) * 100}%`, background: 'rgb(var(--c-amber))' }}
-              />
-            ))}
-            {unfitted.map((d, i) => (
-              <span
-                key={d}
-                title={`${d}: never crosses cleanly, drawn as a ring at the axis edge`}
-                className="absolute top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border"
-                style={{ left: `${100 - i * 2.5}%`, borderColor: 'rgb(var(--foreground) / 0.5)' }}
-              />
-            ))}
-          </div>
-          <p className="mt-3 font-mono2 text-[11px] leading-5 text-foreground/50">
-            the strip: one dot per fitted switchover, of 30 steps. {fits.length} of{' '}
-            {DIRECTIONS.length} directions fit a logistic curve; {unfitted.length} never cross and
-            sit at the right edge as rings. median step {medianStep.toFixed(0)}, {firstThird} of{' '}
-            {fits.length} inside the first third, {beforeHalf} before the halfway point, non-school
-            fits {Math.min(...nsSteps).toFixed(1)} to {Math.max(...nsSteps).toFixed(1)}.
-          </p>
-        </Panel>
-      </Reveal>
+      <AllDirections />
     </SceneShell>
   )
 }
@@ -582,7 +667,19 @@ export function TextEncoderScene() {
           but both were computed, so the static "and" is the accurate statement. */}
       <Reveal>
         <p className="prose-scene max-w-2xl">
-          Each prompt is first represented by the model's text encoder, so the geographic alignments observed in the
+          Each prompt is first represented by the model's{' '}
+          <GlossaryTerm
+            term="text encoder"
+            def={
+              <p>
+                The part of an image-making system that turns the words you type into a list of numbers the rest of
+                the system can work with.
+              </p>
+            }
+          >
+            text encoder
+          </GlossaryTerm>
+          , so the geographic alignments observed in the
           visual space might reflect corresponding alignments already present in the textual space. For example,
           perhaps the text encoder already puts “a wedding” and “a wedding in the USA” next to each other, and the
           image decoder is simply reflecting this alignment. To test this, for each scene we compare the experimental
@@ -597,12 +694,6 @@ export function TextEncoderScene() {
           correspondence is weak, suggesting that the geographic alignment observed in the images
           emerges during image generation.
         </p>
-        <InfoBox title="glossary · text encoder">
-          <p>
-            The part of an image-making system that turns the words you type into a list of numbers
-            the rest of the system can work with.
-          </p>
-        </InfoBox>
       </Reveal>
 
       <Reveal delay={0.08}>

@@ -88,7 +88,7 @@ export function Picker<T extends string>({
   label: string
   value: T
   onChange: (v: T) => void
-  options: { value: T; label: string }[]
+  options: { value: T; label: string; group?: string }[]
   width?: string
   accent?: string
 }) {
@@ -101,9 +101,19 @@ export function Picker<T extends string>({
         className={`${width} rounded-md border border-border bg-background/80 px-2.5 py-1.5 font-mono2 text-xs text-foreground/85 outline-none transition focus:border-amber-300/60`}
         style={accent ? { color: rgb(accent), borderColor: rgba(accent, 0.5) } : undefined}
       >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
+        {options.some((o) => o.group) ? (
+          options.map((o) => o.group).filter((g, i, arr): g is string => !!g && arr.indexOf(g) === i).map((g) => (
+            <optgroup key={g} label={g}>
+              {options.filter((o) => o.group === g).map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </optgroup>
+          ))
+        ) : (
+          options.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))
+        )}
       </select>
     </label>
   )

@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
-import { useState, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
 
 export function Reveal({ children, delay = 0, className }: { children: ReactNode; delay?: number; className?: string }) {
   return (
@@ -116,21 +117,39 @@ export function Panel({ children, className = '' }: { children: ReactNode; class
   )
 }
 
-/* An expandable background/mechanism note: one short paragraph, there for readers
-   who want it, out of the way of the visuals for everyone else. */
-export function InfoBox({ title, children }: { title: string; children: ReactNode }) {
-  const [open, setOpen] = useState(false)
+/* Term pop-ups (2026-10-16, Giray). The five "glossary · X" InfoBoxes used to sit
+   folded shut under the paragraph that first used the term: a reader who did not
+   know the word had to notice the box, stop, and click it open — and a reader who
+   did not notice it went on without the definition. The definitions now ride on
+   the words themselves. Each term's FIRST encounter in the page's running prose is
+   dotted-underlined and opens this pop-up on hover or keyboard focus; headings,
+   kickers and titles never carry one, and later mentions carry no decoration.
+   InfoBox had no other consumers and is gone. The five placements: prompt guidance
+   + seed (Introduction), embedding (Part I section lead), text encoder (scene 04's
+   first sentence), annotator (scene 07's first sentence).
+   Styled as the page's own card idiom rather than the inverted shadcn pill; the
+   arrow's bg/fill are overridden through the content class. */
+export function GlossaryTerm({ term, def, children }: { term: string; def: ReactNode; children: ReactNode }) {
   return (
-    <div className="rounded-lg border border-border bg-background/40">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        className="flex w-full items-center justify-between px-3.5 py-2.5 font-mono2 text-[10px] tracking-wider text-foreground/45 uppercase transition hover:text-foreground/80"
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          tabIndex={0}
+          className="cursor-help underline decoration-dotted decoration-foreground/60 underline-offset-4 outline-none transition-colors hover:decoration-amber-200/80 focus-visible:decoration-amber-200/80"
+        >
+          {children}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent
+        side="top"
+        sideOffset={10}
+        className="w-72 max-w-[80vw] rounded-lg border border-border bg-background p-3 text-left text-[12px] leading-5 tracking-normal text-foreground/70 normal-case shadow-xl [&_svg]:bg-background [&_svg]:fill-background"
       >
-        {title}
-        <span className="text-foreground/30">{open ? '−' : '+'}</span>
-      </button>
-      {open && <div className="px-3.5 pb-3.5 text-[13px] leading-6 text-foreground/60">{children}</div>}
-    </div>
+        <span className="mb-1.5 block font-mono2 text-[9px] tracking-widest text-foreground/40 uppercase">
+          glossary · {term}
+        </span>
+        {def}
+      </TooltipContent>
+    </Tooltip>
   )
 }

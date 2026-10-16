@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { SceneShell, Reveal, Panel, TierNote } from '../components/Scene'
-import { ZoomImage, BoxPicker, RepoLink, Cite, BarRow } from '../components/Viz'
+import { SceneShell, Reveal, Panel, TierNote, GlossaryTerm } from '../components/Scene'
+import { ZoomImage, BoxPicker, RepoLink, Cite } from '../components/Viz'
 import { ANNOTATOR } from '../data/references'
 import { rgb, rgba } from '../lib/colors'
 import { ordinal } from '../lib/utils'
@@ -16,7 +16,7 @@ import {
   type Answer,
 } from '../data/uiv2'
 import { useModel, modelImg, modelSeeds, seedCount, modelVqa, isSd21, MODEL_NAME, CROSS_MODEL_NOTE } from '../data/modelData'
-import { openForModel, shiftFor, SHIFT_AGG, type ShiftRow } from '../data/crossmodel'
+import { openForModel, shiftFor, LOOP, type ShiftRow } from '../data/crossmodel'
 import { STATS } from '../data/research'
 
 const SIT_OPTS = SITS.map((s) => ({ value: s, label: `a ${s}` }))
@@ -336,7 +336,19 @@ function NamedScene() {
             by these same labels, so a paraphrase here would not match any row the
             reader can see. */}
         <p className="prose-scene max-w-2xl">
-          For this experiment, we use <RepoLink m={ANNOTATOR} /> <Cite ids={['gemma2026']} /> as a visual annotator. For each prompt, the annotator is
+          For this experiment, we use <RepoLink m={ANNOTATOR} /> <Cite ids={['gemma2026']} /> as a{' '}
+          <GlossaryTerm
+            term="annotator"
+            def={
+              <p>
+                A separate AI system that is shown each picture on its own, without being told the prompt that produced
+                it, and says what it can see in it.
+              </p>
+            }
+          >
+            visual annotator
+          </GlossaryTerm>
+          . For each prompt, the annotator is
           shown each generated image and answers a fixed set of questions, each addressing one semantic concept, for
           example, “Is food visible?” where food is the semantic concept. Then we aggregate the answers across the
           prompt images.
@@ -348,7 +360,11 @@ function NamedScene() {
         <p className="prose-scene mt-4 max-w-2xl">
           Every prompt image set is annotated using the same {BATTERY.universal} questions, along with a small number of
           scene-specific questions, for a total of {BATTERY.perCellMin} or {BATTERY.perCellMax} per prompt and{' '}
-          {BATTERY.distinct} distinct questions across the study. We define a frequent assumption as an answer that
+          {BATTERY.distinct} distinct questions across the study. The shared questions cover what any scene can
+          contain: the setting, the people and their clothing, buildings, the time of day, and how wealthy the place
+          looks. The scene-specific ones ask about things that only exist in that event, so they cannot be put to every
+          image: a coffin or flowers at a funeral, the food and drink at a breakfast, the colour of the ceremonial outfit
+          at a wedding, uniforms at a school. We define a frequent assumption as an answer that
           appears in at least {Math.round(SETTLED * STATS.seeds)} of a prompt's {STATS.seeds} generated images, as
           assumptions the model consistently decides to fill the underspecified gaps in the prompt. With this threshold,
           Stable Diffusion 2.1 exhibits <strong className="text-foreground">{CARDS_HEADLINE}</strong> frequent
@@ -538,7 +554,7 @@ function BridgeScene() {
      chart and had to take the filtering on trust. A cell carries 14-16 attributes,
      so there was never a length problem to solve; showing all of them lets the
      shape of the whole decomposition be read, small bars included. The three
-     groups stay, including the circular one. */
+     groups stay, including the prompt-given one. */
   const real = rows.filter((r) => !r.sep)
   const taut = rows.filter((r) => r.sep)
   const moved = real.filter((r) => r.plain !== r.value)
@@ -583,40 +599,10 @@ function BridgeScene() {
           contribute much to explaining the embedding distance.
         </p>
       </Reveal>
-      <Reveal delay={0.08}>
-        <Panel className="mt-10">
-          <div className="font-mono2 text-[10px] tracking-widest text-foreground/40 uppercase">
-            every model, every cell · one bar per question
-          </div>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-foreground/60">
-            Each bar is a question's mean share of the movement from an unspecified prompt to a
-            country prompt, over every model and cell that asks it. Rows whose two prompts' answers
-            barely overlap are left out of the mean and counted at the right: there the prompt
-            already gave the answer.
-          </p>
-          <div className="mt-4 space-y-1.5">
-            {SHIFT_AGG.slice(0, 10).map((a, i) => (
-              <BarRow
-                key={a.q}
-                label={Q_TEXT[a.q] ?? a.q}
-                labelWidth="w-56"
-                value={a.mean}
-                max={SHIFT_AGG[0].mean}
-                color="--c-amber"
-                delay={i * 0.03}
-                right={
-                  a.sep > 0 ? (
-                    <span className="font-mono2 text-[11px] text-foreground/50">{a.sep} prompt-given</span>
-                  ) : undefined
-                }
-              />
-            ))}
-          </div>
-          <p className="mt-3 font-mono2 text-[11px] leading-5 text-foreground/50">
-            the remaining {SHIFT_AGG.length - 10} questions sit at or below {SHIFT_AGG[10].mean.toFixed(2)}
-          </p>
-        </Panel>
-      </Reveal>
+      {/* The pooled "every model, every cell" chart that opened this scene (SHIFT_AGG,
+          added 2026-10-07 for the reviewer's "which questions were most influential
+          overall") was REMOVED 2026-10-16 (Giray). Scene 07 now explains why the
+          question set differs from scene to scene instead. */}
       <Reveal delay={0.08}>
         <Panel className="mt-10">
           <div className="flex flex-wrap items-end gap-4">
@@ -692,9 +678,35 @@ function BridgeScene() {
           </div>
         </Panel>
       </Reveal>
+      {/* Closing the loop (2026-10-16, Giray): the reviewer's "why are most images
+          close to the US, Germany, and Russia". Descriptive only — what the answers
+          show, not why the models were trained that way. Every number is LOOP in
+          crossmodel.ts, pooled over all seven models; the six markers named in words
+          are LOOP_MARKERS, ranked there. */}
+      <Reveal delay={0.08}>
+        <p className="prose-scene mt-10 max-w-2xl">
+          Comparing answers instead of pictures also shows what places the geographically unspecified generations
+          closest to the United States, Germany, and Russia. Pooled over all seven models and six scenes, the most common
+          answer to a question is the same for “a &lt;scene&gt;” and “a &lt;scene&gt; in the United States” in{' '}
+          {pct(LOOP.same.US)} of cases, in {pct(LOOP.same.DE)} for Germany, and in {pct(LOOP.same.RU)} for Russia,
+          compared with {pct(LOOP.farSame)} on average for Indonesia, Japan, Egypt, India, and Nigeria, among which
+          Japan comes closest at {pct(LOOP.same.JP)}. The near countries mostly receive the answers the unspecified
+          prompt already gives. What sets the other countries apart is concentrated in a few questions that carry
+          cultural markers: the colour of funeral clothing, which continent the scene appears to be in, the drink at
+          breakfast, school uniforms, whether clothing is traditional, and headwear. Their most common answer changes
+          in {pct(LOOP.markerFar)} of comparisons for the other five countries, but in only {pct(LOOP.markerNear)} for
+          the United States, Germany, and Russia. When no country is named, the models fill these gaps the way they do
+          for the United States, Germany, and Russia. Why these are the answers the models fall back on is beyond what
+          we measured here. Two possible contributors are the training data, if images from these countries are
+          over-represented in it, and the language of the prompts: every prompt here is in English, and the language a
+          scene is described in may shape which version of it the model treats as the default.
+        </p>
+      </Reveal>
     </SceneShell>
   )
 }
+
+const pct = (v: number) => `${Math.round(v * 100)}%`
 
 /* ── Scene 15 (F17, "not one measuring stick") was cut on 2026-07-30 ───────────
    Every distance chart now carries its own DINOv3 / CLIP toggle, so a whole scene
