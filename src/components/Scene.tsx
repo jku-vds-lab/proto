@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { type ReactNode } from 'react'
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip'
+import { rgb } from '../lib/colors'
 
 export function Reveal({ children, delay = 0, className }: { children: ReactNode; delay?: number; className?: string }) {
   return (
@@ -128,7 +129,13 @@ export function Panel({ children, className = '' }: { children: ReactNode; class
    + seed (Introduction), embedding (Part I section lead), text encoder (scene 04's
    first sentence), annotator (scene 07's first sentence).
    Styled as the page's own card idiom rather than the inverted shadcn pill; the
-   arrow's bg/fill are overridden through the content class. */
+   arrow's bg/fill are overridden through the content class.
+   2026-10-17 (Giray): the term now opens with a small emerald gem. The dotted
+   underline only spoke to a reader already pointing at the word, so nothing told a
+   reader scanning the paragraph that a definition was there. The gem sits inside
+   the trigger, so it is part of the hover and focus target and travels with the
+   term into kickers and headings. Emerald (--c-em) is the page's known/answered
+   hue, and the shape is a diamond so it reads as a marker, not a bullet. */
 export function GlossaryTerm({ term, def, children }: { term: string; def: ReactNode; children: ReactNode }) {
   return (
     <Tooltip>
@@ -137,6 +144,16 @@ export function GlossaryTerm({ term, def, children }: { term: string; def: React
           tabIndex={0}
           className="cursor-help underline decoration-dotted decoration-foreground/60 underline-offset-4 outline-none transition-colors hover:decoration-amber-200/80 focus-visible:decoration-amber-200/80"
         >
+          <svg
+            aria-hidden
+            width="6"
+            height="6"
+            viewBox="0 0 6 6"
+            className="mr-[3px] inline-block"
+            style={{ fill: rgb('--c-em'), verticalAlign: '-0.05em' }}
+          >
+            <rect x="0.9" y="0.9" width="4.2" height="4.2" rx="0.5" transform="rotate(45 3 3)" />
+          </svg>
           {children}
         </span>
       </TooltipTrigger>

@@ -192,16 +192,16 @@ function AllDirections() {
     <div className="mt-12 grid items-start gap-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-10">
       <Reveal delay={0.08}>
         <p className="prose-scene">
-          Does the country settle at the same step everywhere? The chart repeats the experiment above for all{' '}
+          Does the country settle at the same step everywhere? This chart repeats the experiment above for all{' '}
           {DIRECTIONS.length} switch directions at once: {SITS.length} scenes, {DIRECTIONS.length / SITS.length} country
-          pairs each. Each line is one direction, and each dot shows how many of its {nSeeds} images ended up closer to
-          the new country when the switch came at that step. Hover a scene to bring its lines forward. In every scene
-          except school, the lines fall together in the shaded band, between step {bandLo} and step {bandHi}: switch
-          before it and most images follow the new country, switch after it and almost none do. School, drawn dashed,
-          behaves differently: its images of two countries look so alike that the switch has little to change, so its
-          lines start low and stay flat.
+          pairs each. Each line is one direction, and each dot is how many of that direction's {nSeeds} images ended up
+          closer to the new country when the switch came at that step. Hover a scene to bring its lines forward. In
+          every scene except school the lines fall together inside the shaded band, between step {bandLo} and step{' '}
+          {bandHi}: switch before the band and most images follow the new country, switch after it and almost none do.
+          School, drawn dashed, is the exception — its two countries' images look so alike that switching has little to
+          change, so its lines start low and stay flat.
           {dupPairs > 0 &&
-            ` ${dupPairs === 1 ? 'One pair' : `${['Two', 'Three', 'Four', 'Five'][dupPairs - 2] ?? dupPairs} pairs`} of directions happen to give the same counts at every step, so their lines lie exactly on top of each other.`}
+            ` ${dupPairs === 1 ? 'One pair of directions produces' : `${['Two', 'Three', 'Four', 'Five'][dupPairs - 2] ?? dupPairs} pairs of directions produce`} identical counts at every step, so their lines lie exactly on top of one another.`}
         </p>
       </Reveal>
       <Reveal delay={0.1}>
@@ -556,11 +556,14 @@ export function CommitEarlyScene() {
 /* Each grid is scaled to its OWN range. Sharing one scale let the image grid's
    larger spread wash the text grid out to near-blank, which is precisely the
    comparison the reader is being asked to make. */
-function BigMatrix({ mat, labels, title, sub }: {
+function BigMatrix({ mat, labels, title, sub, legendLabel }: {
   mat: number[][]
   labels: string[]
   title: string
   sub: string
+  /* names the quantity the ramp reads (2026-10-16, Giray): "low → high" alone says
+     the direction but not which of the two spaces the reader is looking at */
+  legendLabel: string
 }) {
   const [hover, setHover] = useState<{ i: number; j: number } | null>(null)
   /* One grade for both grids (2026-08-10, Giray). Both encode the same job,
@@ -583,7 +586,15 @@ function BigMatrix({ mat, labels, title, sub }: {
       {/* the title carried the grid's identity in its colour while the two ramps
           differed; with one ramp it wears a text token and the words do the work */}
       <div className="font-mono2 text-[11px] text-foreground/75">{title}</div>
-      <div className="font-mono2 text-[10px] leading-4 text-foreground/40">{sub}</div>
+      {/* The two grids are read against each other cell by cell, so they must start
+          at the same y. The subtitle's wrap count depends on the selected model's
+          name, and before 2026-10-17 that put the left grid 16px below the right one
+          whenever one side wrapped and the other did not (rows stopped lining up).
+          Both now reserve two 16px lines. Precondition: no subtitle here can need a
+          third line at lg — the longest is ~103 chars against ~448px of column. If
+          that ever changes, split the head out so the two panels share a grid row
+          instead of relying on this height. */}
+      <div className="min-h-8 font-mono2 text-[10px] leading-4 text-foreground/40">{sub}</div>
       <div className="mt-3 grid gap-[2px]" style={{ gridTemplateColumns: `68px repeat(${labels.length}, minmax(0,1fr))` }}>
         <div />
         {labels.map((l) => (
@@ -616,21 +627,23 @@ function BigMatrix({ mat, labels, title, sub }: {
       </div>
       {/* the ramp is named, not numbered. Endpoints in figures were the last thing
           on this chart still asserting a magnitude, and the two grids' numbers are
-          not on the same ruler. Direction is all a reader needs to follow a pattern. */}
+          not on the same ruler. "low" and "high" carry only the direction; which
+          quantity they bound is legendLabel, since both grids share one ramp. */}
       <div className="mt-3 flex items-center gap-2">
-        <span className="font-mono2 text-[9px] whitespace-nowrap text-foreground/55">low similarity</span>
+        <span className="font-mono2 text-[9px] whitespace-nowrap text-foreground/55">low</span>
         <span
           className="h-2.5 flex-1 rounded-sm"
           style={{ background: `linear-gradient(90deg, ${rgba(cv, 0.1)}, ${rgba(cv, 0.95)})` }}
         />
-        <span className="font-mono2 text-[9px] whitespace-nowrap text-foreground/55">high similarity</span>
+        <span className="font-mono2 text-[9px] whitespace-nowrap text-foreground/55">high</span>
       </div>
+      <div className="mt-1 text-center font-mono2 text-[9px] text-foreground/55">{legendLabel}</div>
       {/* Both grids now share one ramp, so nothing but this line tells the reader
           the two scales are different. It carried a /35 opacity when the colour
           split did that job; at /55 it is actually legible. */}
       <p className="mt-1 font-mono2 text-[9px] leading-4 text-foreground/55">
         Each grid is shaded across its own range, from its lowest similarity to its highest. The two measure in
-        different spaces, so the same shade means a different amount on either side. Compare the <em>arrangement</em>
+        different spaces, so the same shade means a different amount on either side. Compare the <em>arrangement</em>{' '}
         across the two, never the shades themselves.
       </p>
       {/* The hover readout ("Nigeria vs the plain prompt: 0.251 apart") is off,
@@ -679,20 +692,17 @@ export function TextEncoderScene() {
           >
             text encoder
           </GlossaryTerm>
-          , so the geographic alignments observed in the
-          visual space might reflect corresponding alignments already present in the textual space. For example,
-          perhaps the text encoder already puts “a wedding” and “a wedding in the USA” next to each other, and the
-          image decoder is simply reflecting this alignment. To test this, for each scene we compare the experimental
-          prompts in two spaces: the prompt embeddings from the model's text encoder and the visual embeddings of the
-          50 images generated from each prompt obtained by <RepoLink m={DINOV3} /> and <RepoLink m={CLIP} />. In each space, we
-          compare the nine prompts with one another using only that space's own numbers, giving one
-          similarity grid per space: darker means closer together in that space. The two spaces
-          share no scale and each grid is shaded across its own range, so a shade, or a value, in
-          one grid means nothing in the other. What is compared is the arrangement: whether the
-          dark cells fall in the same places. If the alignment in the pictures were inherited from
-          the words, the two arrangements would match. The following figure shows that this
-          correspondence is weak, suggesting that the geographic alignment observed in the images
-          emerges during image generation.
+          , so the geographic alignments seen in the pictures might already be there in the text. Perhaps the text
+          encoder places “a wedding” and “a wedding in the USA” next to each other to begin with, and the image side is
+          only reflecting that. To test this, each scene is measured in two spaces: the prompt embeddings from the
+          model's text encoder, and the visual embeddings of the 50 images each prompt generated, read by{' '}
+          <RepoLink m={DINOV3} /> and <RepoLink m={CLIP} />. In each space the nine prompts are compared with one
+          another using only that space's own numbers, which gives one similarity grid per space — darker where two
+          prompts sit closer together. The two spaces share no scale, and each grid is shaded across its own range, so
+          neither a shade nor a value means the same amount in both. What is compared is the arrangement: whether the
+          dark cells fall in the same places. If the alignment in the pictures were inherited from the words, the two
+          arrangements would match. The figure below shows that the correspondence is weak, which suggests the
+          alignment emerges during image generation rather than being inherited from the prompt.
         </p>
       </Reveal>
 
@@ -716,12 +726,14 @@ export function TextEncoderScene() {
               labels={m.countries}
               title="as sentences · before any image exists"
               sub={`how similar the nine prompts are to one another, read by ${MODEL_NAME[model]}'s own text encoder`}
+              legendLabel="similarity between prompts"
             />
             <BigMatrix
               mat={imgMat}
               labels={m.countries}
               title="as pictures · once they are drawn"
               sub={`how similar the nine 50-image sets are to one another, read by ${imgRuler === 'dinov3' ? 'DINOv3 ViT-7B/16' : 'CLIP ViT-L/14'}`}
+              legendLabel="similarity between images"
             />
           </div>
           {/* No prose under the grids, 2026-08-10 (Giray). Do not write a sentence

@@ -685,21 +685,22 @@ function BridgeScene() {
           are LOOP_MARKERS, ranked there. */}
       <Reveal delay={0.08}>
         <p className="prose-scene mt-10 max-w-2xl">
-          Comparing answers instead of pictures also shows what places the geographically unspecified generations
-          closest to the United States, Germany, and Russia. Pooled over all seven models and six scenes, the most common
-          answer to a question is the same for “a &lt;scene&gt;” and “a &lt;scene&gt; in the United States” in{' '}
-          {pct(LOOP.same.US)} of cases, in {pct(LOOP.same.DE)} for Germany, and in {pct(LOOP.same.RU)} for Russia,
-          compared with {pct(LOOP.farSame)} on average for Indonesia, Japan, Egypt, India, and Nigeria, among which
-          Japan comes closest at {pct(LOOP.same.JP)}. The near countries mostly receive the answers the unspecified
-          prompt already gives. What sets the other countries apart is concentrated in a few questions that carry
-          cultural markers: the colour of funeral clothing, which continent the scene appears to be in, the drink at
-          breakfast, school uniforms, whether clothing is traditional, and headwear. Their most common answer changes
-          in {pct(LOOP.markerFar)} of comparisons for the other five countries, but in only {pct(LOOP.markerNear)} for
-          the United States, Germany, and Russia. When no country is named, the models fill these gaps the way they do
-          for the United States, Germany, and Russia. Why these are the answers the models fall back on is beyond what
-          we measured here. Two possible contributors are the training data, if images from these countries are
-          over-represented in it, and the language of the prompts: every prompt here is in English, and the language a
-          scene is described in may shape which version of it the model treats as the default.
+          Comparing answers instead of pictures also shows what puts the geographically unspecified generations closest
+          to the United States, Germany, and Russia. Pooled over all seven models and six scenes, the most common answer
+          to a question is the same for “a &lt;scene&gt;” and “a &lt;scene&gt; in the United States” in{' '}
+          {pct(LOOP.same.US)} of comparisons, for Germany in {pct(LOOP.same.DE)}, and for Russia in {pct(LOOP.same.RU)},
+          against {pct(LOOP.farSame)} on average for Indonesia, Japan, Egypt, India, and Nigeria, where Japan comes
+          closest at {pct(LOOP.same.JP)}. For those three countries the unspecified prompt mostly already gives the
+          answer the named prompt gives. What separates the other five is concentrated in a handful of questions that
+          carry cultural markers: the colour of funeral clothing, which continent the scene appears to be in, the drink
+          at breakfast, school uniforms, whether clothing is traditional, and headwear. On those questions the most
+          common answer changes in {pct(LOOP.markerFar)} of comparisons for the other five countries, but in only{' '}
+          {pct(LOOP.markerNear)} for the United States, Germany, and Russia — so with no country named, the models
+          answer them the way they answer a prompt that names one of the three. Why the models fall back on these
+          answers is beyond what we measured here. Two contributors lie outside this study: the training data, if
+          images from these countries are over-represented in it, and the language of the prompts — every prompt here is
+          in English, and the language a scene is described in may shape which version of it the model treats as the
+          default.
         </p>
       </Reveal>
     </SceneShell>
