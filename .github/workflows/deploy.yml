@@ -1,0 +1,31 @@
+# Deploys the site to Cloudflare Pages every time you push to main
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]      # change if your main branch has another name
+  workflow_dispatch:      # adds a "Run workflow" button in the Actions tab
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Download the repo's code
+      - uses: actions/checkout@v4
+
+      # 2. Install Node.js (needed to build most JS projects)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # 3. Install dependencies and build the site
+      - run: npm ci
+      - run: npm run build
+
+      # 4. Upload the built files to Cloudflare Pages
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # "dist" = the folder your build creates (Vite uses dist, Create React App uses build)
+          command: pages deploy dist --project-name=proto
