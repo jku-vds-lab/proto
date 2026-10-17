@@ -192,16 +192,16 @@ function AllDirections() {
     <div className="mt-12 grid items-start gap-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-10">
       <Reveal delay={0.08}>
         <p className="prose-scene">
-          Does the country settle at the same step everywhere? This chart repeats the experiment above for all{' '}
-          {DIRECTIONS.length} switch directions at once: {SITS.length} scenes, {DIRECTIONS.length / SITS.length} country
-          pairs each. Each line is one direction, and each dot is how many of that direction's {nSeeds} images ended up
-          closer to the new country when the switch came at that step. Hover a scene to bring its lines forward. In
-          every scene except school the lines fall together inside the shaded band, between step {bandLo} and step{' '}
-          {bandHi}: switch before the band and most images follow the new country, switch after it and almost none do.
-          School, drawn dashed, is the exception — its two countries' images look so alike that switching has little to
-          change, so its lines start low and stay flat.
+          Does the country settle at the same step everywhere? This chart brings together all {DIRECTIONS.length} switch
+          directions from the experiment above: {SITS.length} scenes with {DIRECTIONS.length / SITS.length} country
+          pairs each. Each line represents one direction, and each dot shows how many of its {nSeeds} images ended up
+          closer to the new country when the switch occurred at that step. Hover over a scene to highlight its lines.
+          Despite some variation, most curves show a strong drop between steps {bandLo} and {bandHi} (shaded): earlier
+          switches are more likely to make images follow the new country, while later switches have little effect.
+          School, shown with dashed lines, is the main exception. Its images for the two countries look so similar that
+          switching has little effect, and its curves start low and remain relatively flat.
           {dupPairs > 0 &&
-            ` ${dupPairs === 1 ? 'One pair of directions produces' : `${['Two', 'Three', 'Four', 'Five'][dupPairs - 2] ?? dupPairs} pairs of directions produce`} identical counts at every step, so their lines lie exactly on top of one another.`}
+            ` Some curves overlap exactly because ${dupPairs === 1 ? 'one pair of directions produces' : `${['two', 'three', 'four', 'five'][dupPairs - 2] ?? dupPairs} pairs of directions produce`} identical counts at every step.`}
         </p>
       </Reveal>
       <Reveal delay={0.1}>
@@ -696,13 +696,14 @@ export function TextEncoderScene() {
           encoder places “a wedding” and “a wedding in the USA” next to each other to begin with, and the image side is
           only reflecting that. To test this, each scene is measured in two spaces: the prompt embeddings from the
           model's text encoder, and the visual embeddings of the 50 images each prompt generated, read by{' '}
-          <RepoLink m={DINOV3} /> and <RepoLink m={CLIP} />. In each space the nine prompts are compared with one
-          another using only that space's own numbers, which gives one similarity grid per space — darker where two
-          prompts sit closer together. The two spaces share no scale, and each grid is shaded across its own range, so
-          neither a shade nor a value means the same amount in both. What is compared is the arrangement: whether the
-          dark cells fall in the same places. If the alignment in the pictures were inherited from the words, the two
-          arrangements would match. The figure below shows that the correspondence is weak, which suggests the
-          alignment emerges during image generation rather than being inherited from the prompt.
+          <RepoLink m={DINOV3} /> and <RepoLink m={CLIP} />. We compare the nine prompts with one another in text space,
+          and their corresponding images with one another in image space, producing one similarity grid for each.
+          Darker cells indicate greater similarity within a space. Because the two spaces use different scales and each
+          grid is shaded independently, colors and values cannot be compared directly. Instead, we compare the patterns:
+          do the darker cells appear in the same places? If the geographic alignment observed in the images were simply
+          inherited from the text representations, the patterns should be similar. The figure below shows that this
+          correspondence is weak, suggesting that the alignment emerges during image generation rather than being
+          directly inherited from the text.
         </p>
       </Reveal>
 
